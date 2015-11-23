@@ -1,6 +1,6 @@
 # PyImport
 Projeto em python para importar dois arquivos em txt distintos, porém ambos irão para a mesma tabela.
-A idéia é criar um deamon que ira verificar a cada N minutyos se chegaram arquivos.
+A idéia é criar um daemon que ira verificar a cada N minutyos se chegaram arquivos.
 
 #Algoritmo
 
