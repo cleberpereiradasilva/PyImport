@@ -10,8 +10,26 @@ Depois de importar, tem que compactar e guardar em um histórico separado por an
 As informações de data estarão disponíveis nos nomes dos arquivos.
 
 ## Pré requisitos
-	[Python 2.7](http://wiki.python.org.br/) ou mais recente(não testei em versões anteriores pode ser que funcione)
+	[Python 2.7](http://www.python.org.br/) ou mais recente(não testei em versões anteriores)
 	[MySQL](https://www.mysql.com/) ou outro banco
 	[MySQLdb](http://sourceforge.net/projects/mysql-python/files/) no caso de usar MySQL
+
+## Como Rodar
+	Configure as linhas 15 e 16 de acordo com seu path
+	ex:
+		origem = "C:\\01Digital\\aes\\Import"
+		destino_historico = "C:\\01Digital\\aes\\Import\\Historico"
+	Configure os dados do banco de dados nas linhas 35 até 39
+	Coloque para rodar no agendador de tarefas do Windows
+
+## Licença(CC)
+
+You are free to:
+    Share — copy and redistribute the material in any medium or format
+    Adapt — remix, transform, and build upon the material
+    for any purpose, even commercially.
+    The licensor cannot revoke these freedoms as long as you follow the license terms.
+
+
 
 
