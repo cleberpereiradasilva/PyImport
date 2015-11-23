@@ -1,6 +1,13 @@
+# encoding=iso-8859-1  
+import sys  
+reload(sys)  
+sys.setdefaultencoding('iso-8859-1')
+
 import os 
 import time
-import gzip
+import zipfile
+import MySQLdb
+
 
 origem = "C:\\01Digital\\aes\\Import"
 destino_historico = "C:\\01Digital\\aes\\Import\\Historico"
@@ -11,20 +18,78 @@ running = origem + "\\running.dat"
 
 #arquivo onde tera a lista dos files para importar
 job_list = origem + "\\job.list"
+
+
+#numero de inserts por vez
+buffer_insert = 30
+
+def conectar():
+	db = MySQLdb.connect(host="localhost", # your host, usually localhost
+                     user="root", # your username
+                      passwd="", # your password
+                      db="importador") # name of the data base
+	return db
+def executa_query(query):
+	db = conectar()	
+	cursor = db.cursor()
+	try:
+		cursor.execute(query)
+		db.commit()
+	except: 
+		db.rollback()
+	finally:
+		db.close()
+
 	
 def importar_compato(arquivo):
-	print "Importando arquivo compacto..."
+	prefixo_sql = "insert into temp_table_nova(origem,ds_0800,destino,situacao,data,hora,duracao,ddd) values"
+
+	with open(origem + "\\" + arquivo, 'r') as linhas:
+		sql_string=""
+		n=0;
+		virgula=""
+		for linha in linhas.readlines():
+			n +=1
+			colunas = linha.split(";")
+			sql_string += virgula + "('" + colunas[0] +"',"
+			sql_string += "'" + colunas[1] +"',"
+			sql_string += "'" + colunas[2] +"',"
+			sql_string += "'" + colunas[4] +"',"
+			if colunas[5][13:15] > 30:
+				intervalo = '30'
+			else:
+				intervalo = '00'
+			sql_string += "'20" + colunas[5][6:8] + "-" +colunas[5][3:5] + "-" + colunas[5][0:2] + "',"
+			sql_string += "'" + colunas[5][9:12]  + intervalo + "',"
+			sql_string += "'" + colunas[6] +"',"
+			sql_string += "'" + colunas[8] +"')"
+			virgula=","
+			if n >= buffer_insert:				
+				executa_query(prefixo_sql+" "+sql_string)
+				sql_string=""
+				n=0
+				virgula=""
+				
+		#caso tenha sobrado alguma coisa para processar
+		if n >=0:				
+				executa_query(prefixo_sql+" "+sql_string)
+
+
+
 def importar_completo(arquivo):
 	print "Importando arquivo completo..."
+
+
 def descompactar(arquivo):
-	print "Descompactando arquivo..."
+	with zipfile.ZipFile(origem + "\\" + arquivo, "r") as z:
+		z.extractall(origem)
+	os.remove(origem + "\\" + arquivo)
+	
 def compactar(arquivo):
-	prefixo = time.strftime("%Y%m%d-%H%M%S") + "_" + arquivo + '.gz'
-	f_in = open(origem + "\\" + arquivo, 'rb')
-	f_out = gzip.open(origem + "\\" + prefixo, 'wb')
-	f_out.writelines(f_in)
-	f_out.close()
-	f_in.close()
+	prefixo = time.strftime("%Y%m%d-%H%M%S") + "_" + arquivo + '.zip'
+	zout = zipfile.ZipFile(origem + "\\" + prefixo, "w", zipfile.ZIP_DEFLATED) # <--- this is the change you need to make
+	zout.write(origem + "\\" + arquivo,os.path.basename(origem + "\\" + arquivo))
+	zout.close()
 	return prefixo
 
 
@@ -39,8 +104,8 @@ def historico(arquivo):
 	salvar_em = destino_historico+"\\" + partes_nome[parte_data][0:4]+"\\"+partes_nome[parte_data][4:6]+"\\"+partes_nome[parte_data][6:8]
 	if not os.path.exists(salvar_em):
 		os.makedirs(salvar_em)
-	os.rename(origem + "\\" + nome_zip, salvar_em + "\\" + nome_zip)
-	
+	#os.rename(origem + "\\" + nome_zip, salvar_em + "\\" + nome_zip)
+	#os.remove(origem + "\\" + arquivo)
 	
 
 if not os.path.exists(running):
@@ -49,7 +114,8 @@ if not os.path.exists(running):
 		file_running.close()
 
 		#verificar se tem uma lista com os arquivos para ler
-		if os.path.exists(job_list):		
+		if os.path.exists(job_list):	
+			
 			with open(job_list, 'r') as linhas:
 				for linha in linhas.readlines():
 					linha=linha.replace("\n","")
@@ -57,7 +123,7 @@ if not os.path.exists(running):
 					#como nao sei oq vai sair de dentro
 					#no proximo passo procura os txt
 					if linha.endswith('.zip'):
-						descompactar(linha)
+						descompactar(linha)					
 
 					#se tiver txt ja importa....
 					if linha.endswith('.txt'):
@@ -66,7 +132,7 @@ if not os.path.exists(running):
 							importar_compato(linha)
 						else:
 							importar_completo(linha)
-						historico(linha)
+						#historico(linha)
 			
 
 			os.remove(job_list)
