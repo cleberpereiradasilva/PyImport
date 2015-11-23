@@ -6,6 +6,8 @@ sys.setdefaultencoding('iso-8859-1')
 import os 
 import time
 import zipfile
+
+#MySQLdb http://sourceforge.net/projects/mysql-python/files/
 import MySQLdb
 from datetime import date
 
@@ -26,6 +28,10 @@ buffer_insert = 0
 
 dia_semana = ['Dom', 'Seg', 'Ter',  'Qua',  'Qui',  'Sex',  'Sáb']
 
+#prefixo usado nas querys de insert
+prefixo_sql = "insert into temp_table_nova(origem,ds_0800,destino,situacao,OK, "
+prefixo_sql += "NR, LO, CO, CO2, CO3, DSC, OU, data,ano, mes,dia, hora,duracao,ddd, semana) values"
+
 def conectar():
 	db = MySQLdb.connect(host="localhost", # your host, usually localhost
                      user="root", # your username
@@ -45,9 +51,7 @@ def executa_query(query):
 
 	
 def importar_compato(arquivo):
-	prefixo_sql = "insert into temp_table_nova(origem,ds_0800,destino,situacao,data,hora,duracao,ddd) values"
-
-
+	
 	with open(origem + "\\" + arquivo, 'r') as linhas:
 		sql_string=""
 		n=0;
@@ -55,11 +59,18 @@ def importar_compato(arquivo):
 		for linha in linhas.readlines():
 			n +=1
 			colunas = linha.split(";")
-			sql_string += virgula + "('" + colunas[0] +"',"
-			sql_string += "'" + colunas[1] +"',"
-			sql_string += "'" + colunas[2] +"',"
-			sql_string += "'" + colunas[4] +"',"
+			sql_string += virgula + "("
+			#origem da chamada
+			sql_string += "'" + colunas[0] +"',"
 
+			#0800 destino
+			sql_string += "'" + colunas[1] +"',"
+
+			#destino do 0800
+			sql_string += "'" + colunas[2] +"',"
+
+			#situacao/status da chamada
+			sql_string += "'" + colunas[4] +"',"
 			sql_string += "'" + ('1' if colunas[4]=="OK" else '0') +"',"
 			sql_string += "'" + ('1' if colunas[4]=="NR" else '0') +"',"
 			sql_string += "'" + ('1' if colunas[4]=="LO" else '0') +"',"
@@ -68,33 +79,47 @@ def importar_compato(arquivo):
 			sql_string += "'" + ('1' if colunas[4]=="CO3" else '0') +"',"
 			sql_string += "'" + ('1' if colunas[4]=="DSC" else '0') +"',"
 
+			#o resto sera considerado como OU
+			if not colunas[4] in ["OK", "NR", "LO", "CO", "CO2", "CO3", "DSC"] :
+				sql_string += "'1',"
+			else:
+				sql_string += "'0',"
+			
+			#data da chamada
+			sql_string += "'20" + colunas[5][6:8] + "-" +colunas[5][3:5] + "-" + colunas[5][0:2] + "',"
 
-			sql_string += "'" + ('1' if colunas[4] !="OK" 
-				&& colunas[4] !="NR" else '0') +"',"
+			#campo ano, mes e dia
+			sql_string += "'20" + colunas[5][6:8] + "',"
+			sql_string += "'" +colunas[5][3:5]  + "',"
+			sql_string += "'" +colunas[5][0:2] + "',"
 
+			#hora com intervalo de 30 em 30
 			if colunas[5][13:15] > 30:
 				intervalo = '30'
 			else:
 				intervalo = '00'
-			sql_string += "'20" + colunas[5][6:8] + "-" +colunas[5][3:5] + "-" + colunas[5][0:2] + "',"
 			sql_string += "'" + colunas[5][9:12]  + intervalo + "',"
+
+			#tempo da ligacao
 			sql_string += "'" + colunas[6] +"',"
+
+			#dd chamante
 			sql_string += "'" + colunas[8] +"',"
+
+			#dia da semana
 			sql_string += "'" + dia_semana[date(int("20" + colunas[5][6:8]) , int(colunas[5][3:5]) , int(colunas[5][0:2])).weekday()] +"'"
 			
 			sql_string += ")"
 			virgula=","
 			if n >= buffer_insert:				
-				#executa_query(prefixo_sql+" "+sql_string)
-				print sql_string
+				executa_query(prefixo_sql+" "+sql_string)				
 				sql_string=""
 				n=0
 				virgula=""
 
 		#caso tenha sobrado alguma coisa para processar
-		if n >=0:		
-			pass		
-				#print sql_string
+		if n >=0:					
+			executa_query(prefixo_sql+" "+sql_string)
 
 
 
