@@ -12,32 +12,41 @@ import MySQLdb
 from datetime import date
 
 
+#			settings
+################################################################
 origem = "C:\\01Digital\\aes\\Import"
 destino_historico = "C:\\01Digital\\aes\\Import\\Historico"
+host_database = "localhost"
+user_database = "root"
+pass_database =""
+banco_database ="importador"
+#prefixo usado nas querys de insert
+prefixo_sql = "insert into temp_table_nova(origem,ds_0800,destino,situacao,OK, "
+prefixo_sql += "NR, LO, CO, CO2, CO3, DSC, OU, data, data_banco,ano, mes,dia, hora,duracao,ddd, semana) values"
+#lista de 0800 que serao imortados
+permitidos = ['08007272196','08007272196','08007271196','08007290196','08007701196','08007272120','08007240120','08007231000','08007232425','08007241234'
+,'08007290196','08007262626','08007230120','08007242424','08007245678','08007273123','08007700480','08007700260','08007728626']
+#numero de inserts por vez
+buffer_insert = 100
+
+################################################################
+
+
 
 #como o proceso pode demorar entao vou criar um controlador
 #caso exista o arquivo running entao nao faz nada...
 running = origem + "\\running.dat"
-
 #arquivo onde tera a lista dos files para importar
 job_list = origem + "\\job.list"
-
-
-#numero de inserts por vez
-buffer_insert = 0
-
 dia_semana = ['Dom', 'Seg', 'Ter',  'Qua',  'Qui',  'Sex',  'Sáb']
 
-#prefixo usado nas querys de insert
-prefixo_sql = "insert into temp_table_nova(origem,ds_0800,destino,situacao,OK, "
-prefixo_sql += "NR, LO, CO, CO2, CO3, DSC, OU, data,ano, mes,dia, hora,duracao,ddd, semana) values"
-
 def conectar():
-	db = MySQLdb.connect(host="localhost", # your host, usually localhost
-                     user="root", # your username
-                      passwd="", # your password
-                      db="importador") # name of the data base
+	db = MySQLdb.connect(host=host_database, # your host, usually localhost
+                     user=user_database, # your username
+                      passwd=pass_database, # your password
+                      db=banco_database) # name of the data base
 	return db
+
 def executa_query(query):
 	db = conectar()	
 	cursor = db.cursor()
@@ -49,7 +58,18 @@ def executa_query(query):
 	finally:
 		db.close()
 
-#os dois metodos abaixo estão de acordo com minha regra de negocio
+def get_query(query):	
+	db = conectar()	
+	cursor = db.cursor()
+	data=[]
+	try:
+		cursor.execute(query)
+		data=cursor.fetchall()	
+	finally:
+		db.close()
+	return data	
+
+#os tres metodos abaixo estão de acordo com minha regra de negocio
 #caso queira usasr o programa, acredito que seria aqui o lugar
 #para aplicar sua regra...
 #nao repara se parecer estranha... mas é um sistema legado que 
@@ -88,10 +108,14 @@ def importar_compato(arquivo):
 			if not colunas[4] in ["OK", "NR", "LO", "CO", "CO2", "CO3", "DSC"] :
 				sql_string += "'1',"
 			else:
-				sql_string += "'0',"
+				sql_string += "'0',"			
 			
-			#data da chamada
+			#data, apenas para exibir em um grafico... não sera computado como data
+			sql_string += "'" +colunas[5][0:2] + "/" + colunas[5][3:5] + "/" + "20" + colunas[5][6:8]  + "',"
+
+			#data_banco
 			sql_string += "'20" + colunas[5][6:8] + "-" +colunas[5][3:5] + "-" + colunas[5][0:2] + "',"
+
 
 			#campo ano, mes e dia
 			sql_string += "'20" + colunas[5][6:8] + "',"
@@ -119,20 +143,18 @@ def importar_compato(arquivo):
 			#aquela virguala basica so para ajeitar a query =D
 			virgula=","
 
-
 			#opa, da uma parada e faz o insert de acordo com 
 			#o tamanho do buffer
-			if n >= buffer_insert:				
+			if n >= buffer_insert:		
+				#print prefixo_sql+" "+sql_string
 				executa_query(prefixo_sql+" "+sql_string)				
 				sql_string=""
 				n=0
 				virgula=""
 
 		#caso tenha sobrado alguma coisa para processar
-		if n >=0:					
+		if sql_string != "":		
 			executa_query(prefixo_sql+" "+sql_string)
-
-
 
 def importar_completo(arquivo):
 	with open(origem + "\\" + arquivo, 'r') as linhas:
@@ -144,76 +166,125 @@ def importar_completo(arquivo):
 		for linha in linhas.readlines():
 			if len(linha) > 10:				
 				n +=1
-				colunas = linha.split("|")
-				sql_string += virgula + "("
-				#origem da chamada
-				sql_string += "'" + colunas[0] +"',"
 
-				#0800 destino
-				#este arquivo vem com operadoras antes do 0800 ex 015, 021....
-				sql_string += "'0800" + colunas[1].split("0800")[1] +"',"
+				colunas = linha.split("|")				
+				if "0800" + colunas[1].split("0800")[1] in permitidos:
 
-				#destino do 0800
-				sql_string += "'" + colunas[2] +"',"
+					sql_string += virgula + "("
+					#origem da chamada
+					sql_string += "'" + colunas[0] +"',"
 
-				#situacao/status da chamada
-				sql_string += "'" + colunas[7] +"',"
-				sql_string += "'" + ('1' if colunas[7]=="OK" else '0') +"',"
-				sql_string += "'" + ('1' if colunas[7]=="NR" else '0') +"',"
-				sql_string += "'" + ('1' if colunas[7]=="LO" else '0') +"',"
-				sql_string += "'" + ('1' if colunas[7]=="CO" else '0') +"',"
-				sql_string += "'" + ('1' if colunas[7]=="CO2" else '0') +"',"
-				sql_string += "'" + ('1' if colunas[7]=="CO3" else '0') +"',"
-				sql_string += "'" + ('1' if colunas[7]=="DSC" else '0') +"',"
+					#0800 destino
+					#este arquivo vem com operadoras antes do 0800 ex 015, 021....
+					sql_string += "'0800" + colunas[1].split("0800")[1] +"',"
 
-				#o resto sera considerado como OU
-				if not colunas[7] in ["OK", "NR", "LO", "CO", "CO2", "CO3", "DSC"] :
-					sql_string += "'1',"
-				else:
-					sql_string += "'0',"
-				
-				#data da chamada
-				sql_string += "'" +colunas[3] + "',"
+					#destino do 0800
+					sql_string += "'" + colunas[2] +"',"
 
-				#campo ano, mes e dia
-				sql_string += "'" + colunas[3][0:4] + "',"
-				sql_string += "'" +colunas[3][5:7]  + "',"
-				sql_string += "'" +colunas[3][8:10] + "',"
+					#situacao/status da chamada
+					sql_string += "'" + colunas[7] +"',"
+					sql_string += "'" + ('1' if colunas[7]=="OK" else '0') +"',"
+					sql_string += "'" + ('1' if colunas[7]=="NR" else '0') +"',"
+					sql_string += "'" + ('1' if colunas[7]=="LO" else '0') +"',"
+					sql_string += "'" + ('1' if colunas[7]=="CO" else '0') +"',"
+					sql_string += "'" + ('1' if colunas[7]=="CO2" else '0') +"',"
+					sql_string += "'" + ('1' if colunas[7]=="CO3" else '0') +"',"
+					sql_string += "'" + ('1' if colunas[7]=="DSC" else '0') +"',"
 
-				#hora com intervalo de 30 em 30
-				if colunas[4][4:6] > 30:
-					intervalo = '30'
-				else:
-					intervalo = '00'
-				sql_string += "'" + colunas[4][0:3]  + intervalo + "',"
+					#o resto sera considerado como OU
+					if not colunas[7] in ["OK", "NR", "LO", "CO", "CO2", "CO3", "DSC"] :
+						sql_string += "'1',"
+					else:
+						sql_string += "'0',"				
 
-				#tempo da ligacao
-				sql_string += "'" + colunas[5] +"',"
+					#data, apenas para exibir em um grafico... não sera computado como data
+					sql_string += "'" +colunas[3][8:10] + "/" + colunas[3][5:7] + "/" + colunas[3][0:4] + "',"
 
-				#dd chamante
-				sql_string += "'" + colunas[6] +"',"
+					#data_banco
+					sql_string += "'" +colunas[3] + "',"
 
-				#dia da semana
-				sql_string += "'" + dia_semana[date(int(colunas[3][0:4]) , int(colunas[3][5:7]) , int(colunas[3][8:10])).weekday()] +"'"
-				
-				sql_string += ")"
+					#campo ano, mes e dia
+					sql_string += "'" + colunas[3][0:4] + "',"
+					sql_string += "'" +colunas[3][5:7]  + "',"
+					sql_string += "'" +colunas[3][8:10] + "',"
 
-				#aquela virguala basica so para ajeitar a query =D
-				virgula=","
+					#hora com intervalo de 30 em 30
+					if colunas[4][4:6] > 30:
+						intervalo = '30'
+					else:
+						intervalo = '00'
+					sql_string += "'" + colunas[4][0:3]  + intervalo + "',"
 
-				#opa, da uma parada e faz o insert de acordo com 
-				#o tamanho do buffer
-				if n >= buffer_insert:				
-					executa_query(prefixo_sql+" "+sql_string)
-					#reseta as variaveis							
-					sql_string=""
-					n=0
-					virgula=""
+					#tempo da ligacao
+					sql_string += "'" + colunas[5] +"',"
+
+					#dd chamante
+					sql_string += "'" + colunas[6] +"',"
+
+					#dia da semana
+					sql_string += "'" + dia_semana[date(int(colunas[3][0:4]) , int(colunas[3][5:7]) , int(colunas[3][8:10])).weekday()] +"'"
+					
+					sql_string += ")"
+
+					#aquela virguala basica so para ajeitar a query =D
+					virgula=","
+
+					#opa, da uma parada e faz o insert de acordo com 
+					#o tamanho do buffer
+					if n >= buffer_insert:		
+							
+						executa_query(prefixo_sql+" "+sql_string)
+						#reseta as variaveis							
+						sql_string=""
+						n=0
+						virgula=""
 
 		#caso tenha sobrado alguma coisa para processar
-		if n >=0:						
+		if sql_string != "":						
 			executa_query(prefixo_sql+" "+sql_string)
 
+def post_processar():
+	#para evitar alguma catastrofe eu movo os dados para uma tabela
+	#pego os dados que serao substituidos e os guardo
+	#esses dados sao os 0800xxxx e o dia dele, ja que os arquivos sao diarios
+
+	#query para pegar os 0800 e dias q serao afetados
+	aux = get_query("select ds_0800, data_banco from temp_table_nova group by 1")
+
+	#query que irá mover para a tabela segura
+	prefixo_sql_post =  "insert into banco_bp.tbl_0800_calculado_removido(DS_0800,ANO,MES,SEMANA,DATA,DIA,"
+	prefixo_sql_post += "HORA,DATA_HORA,TOTAL,OK,NR,LO,DSC,CO,OU,DURACAO,ATIVO,origem,CIDADE,DDD) "
+	prefixo_sql_post += " select A.* FROM banco_bp.tbl_0800_calculado A where concat(ds_0800,'_',data_hora) in "
+
+	#query que ira remover os dados para serem substituidos, depois de serem salvos...
+	prefixo_sql_delete =  "delete from banco_bp.tbl_0800_calculado where concat(ds_0800,'_',data_hora) in "
+
+	#query q ira dar carga em producao
+	query_post_processo = "insert into banco_bp.TBL_0800_CALCULADO (DS_0800,DATA,data_hora,ANO,MES,DIA,HORA,DDD,SEMANA,TOTAL,OK,NR,LO,DSC,CO,OU,DURACAO) "
+	query_post_processo += "select ds_0800, data, data_banco, ano, mes, dia, hora, ddd, semana, SUM(1) AS TOTAL, SUM(OK) AS OK, SUM(NR) AS NR, "
+	query_post_processo += "SUM(LO) AS LO, SUM(DSC) as DSC, (SUM(CO2)+SUM(CO3)) as CO, SUM(OU) as OU,SUM(DURACAO) as DURACAO "
+	query_post_processo += "from temp_table_nova group by 1,2,3,4,5,6,7,8,9 "
+	
+	sql_string=""
+	n=0;
+	virgula=""
+	for item in aux:
+		n +=1
+		sql_string += virgula + "'" + item[0]+"_"+item[1] +"'"
+		virgula=","
+		if n >= 10:
+			executa_query(prefixo_sql_post + "(" + sql_string +")")
+			executa_query(prefixo_sql_delete + "(" + sql_string +")")
+			sql_string=""
+			n=0
+			virgula=""
+	if sql_string != "":
+		executa_query(prefixo_sql_post + "(" + sql_string +")")
+		executa_query(prefixo_sql_delete + "(" + sql_string +")")
+	executa_query(query_post_processo)		
+
+	#limpar a tabela de importacao
+	executa_query("truncate table temp_table_nova")
 
 def descompactar(arquivo):
 	with zipfile.ZipFile(origem + "\\" + arquivo, "r") as z:
@@ -233,7 +304,6 @@ def compactar(arquivo):
 
 	#devolve o nome do zip
 	return prefixo
-
 
 def historico(arquivo):
 	#compacta e recebe o nome do arquivo.zip 
@@ -263,14 +333,17 @@ def historico(arquivo):
 		os.makedirs(salvar_em)
 
 	#move o zipado e remove o original
-	#os.rename(origem + "\\" + nome_zip, salvar_em + "\\" + nome_zip)
-	#os.remove(origem + "\\" + arquivo)
-	
+	os.rename(origem + "\\" + nome_zip, salvar_em + "\\" + nome_zip)
+	os.remove(origem + "\\" + arquivo)
+
+
+
 
 #primeiro verifica se já esta rodando...
 #pode ser que demore o processo
 if not os.path.exists(running):
 	try:
+		print "Inicio    " + str(time.strftime("%H %M %S"))
 		file_running = open(running,'w')  
 		file_running.close()
 
@@ -294,8 +367,12 @@ if not os.path.exists(running):
 						else:
 							#Consulta_AES_CDRONE_SP01_20150905230000.txt
 							importar_completo(linha)
-						#historico(linha)
+						historico(linha)
 			
+			#faz carga em producao
+			#limpa as tabelas usadas no processo
+			post_processar()
+
 			#limpa a lista de jobs, tudo feito!
 			os.remove(job_list)
 	finally:		
@@ -316,3 +393,4 @@ if not os.path.exists(running):
 	  		text_file.write("\n".join(get_txt_list) + "\n")
 	  		text_file.write("\n".join(get_zip_list) + "\n")
 			text_file.close()
+	print "Fim       " + str(time.strftime("%H %M %S"))

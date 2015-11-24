@@ -1,0 +1,77 @@
+
+CREATE DATABASE banco_bp;
+CREATE TABLE IF NOT EXISTS `banco_bp`.`tbl_0800_calculado` (
+  `DS_0800` varchar(50) DEFAULT NULL,
+  `ANO` int(11) DEFAULT NULL,
+  `MES` int(11) DEFAULT NULL,
+  `SEMANA` varchar(10) DEFAULT NULL,
+  `DATA` varchar(15) DEFAULT NULL,
+  `DIA` int(11) DEFAULT NULL,
+  `HORA` varchar(15) DEFAULT NULL,
+  `DATA_HORA` varchar(100) DEFAULT NULL,
+  `TOTAL` int(11) DEFAULT NULL,
+  `OK` int(11) DEFAULT NULL,
+  `NR` int(11) DEFAULT NULL,
+  `LO` int(11) DEFAULT NULL,
+  `DSC` int(11) DEFAULT NULL,
+  `CO` int(11) DEFAULT NULL,
+  `OU` int(11) DEFAULT NULL,
+  `DURACAO` double DEFAULT NULL,
+  `ATIVO` int(11) DEFAULT '1',
+  `origem` varchar(100) DEFAULT NULL,
+  `CIDADE` varchar(200) DEFAULT NULL,
+  `DDD` varchar(10) DEFAULT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+
+
+CREATE TABLE IF NOT EXISTS `banco_bp`.`tbl_0800_calculado_removido` (
+  `DT_INSERT` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `DS_0800` varchar(50) DEFAULT NULL,
+  `ANO` int(11) DEFAULT NULL,
+  `MES` int(11) DEFAULT NULL,
+  `SEMANA` varchar(10) DEFAULT NULL,
+  `DATA` varchar(15) DEFAULT NULL,
+  `DIA` int(11) DEFAULT NULL,
+  `HORA` varchar(15) DEFAULT NULL,
+  `DATA_HORA` varchar(100) DEFAULT NULL,
+  `TOTAL` int(11) DEFAULT NULL,
+  `OK` int(11) DEFAULT NULL,
+  `NR` int(11) DEFAULT NULL,
+  `LO` int(11) DEFAULT NULL,
+  `DSC` int(11) DEFAULT NULL,
+  `CO` int(11) DEFAULT NULL,
+  `OU` int(11) DEFAULT NULL,
+  `DURACAO` double DEFAULT NULL,
+  `ATIVO` int(11) DEFAULT '1',
+  `origem` varchar(100) DEFAULT NULL,
+  `CIDADE` varchar(200) DEFAULT NULL,
+  `DDD` varchar(10) DEFAULT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+
+
+CREATE DATABASE importador;
+CREATE TABLE IF NOT EXISTS `importador`.`temp_table_nova` (
+  `origem` varchar(400) COLLATE utf8_swedish_ci DEFAULT NULL,
+  `ds_0800` varchar(400) COLLATE utf8_swedish_ci DEFAULT NULL,
+  `destino` varchar(400) COLLATE utf8_swedish_ci DEFAULT NULL,
+  `data` varchar(400) COLLATE utf8_swedish_ci DEFAULT NULL,
+  `data_banco` varchar(40) COLLATE utf8_swedish_ci NOT NULL,
+  `ano` int(11) NOT NULL,
+  `mes` int(11) NOT NULL,
+  `dia` int(11) NOT NULL,
+  `hora` varchar(400) COLLATE utf8_swedish_ci DEFAULT NULL,
+  `duracao` varchar(400) COLLATE utf8_swedish_ci DEFAULT NULL,
+  `ddd` varchar(400) COLLATE utf8_swedish_ci DEFAULT NULL,
+  `situacao` varchar(400) COLLATE utf8_swedish_ci DEFAULT NULL,
+  `OK` int(11) NOT NULL,
+  `NR` int(11) NOT NULL,
+  `LO` int(11) NOT NULL,
+  `CO` int(11) NOT NULL,
+  `CO2` int(11) NOT NULL,
+  `CO3` int(11) NOT NULL,
+  `DSC` int(11) NOT NULL,
+  `OU` int(11) NOT NULL,
+  `campo0` varchar(400) COLLATE utf8_swedish_ci DEFAULT NULL,
+  `cnl` varchar(400) COLLATE utf8_swedish_ci DEFAULT NULL,
+  `semana` varchar(5) COLLATE utf8_swedish_ci NOT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_swedish_ci;
