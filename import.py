@@ -136,10 +136,13 @@ def importar_compacto(arquivo):
 				sql_string += "'" +colunas[5][0:2] + "',"
 
 				#hora com intervalo de 30 em 30
-				if colunas[5][13:15] > 30:
+				
+				if colunas[5][12:15] > '30':
 					intervalo = '30'
 				else:
 					intervalo = '00'
+				
+				
 				sql_string += "'" + colunas[5][9:12]  + intervalo + "',"
 
 				#tempo da ligacao
@@ -232,10 +235,11 @@ def importar_completo(arquivo):
 					sql_string += "'" +colunas[3][8:10] + "',"
 
 					#hora com intervalo de 30 em 30
-					if colunas[4][4:6] > 30:
+					if colunas[4][3:5] > '30':
 						intervalo = '30'
 					else:
 						intervalo = '00'
+					
 					sql_string += "'" + colunas[4][0:3]  + intervalo + "',"
 
 					#tempo da ligacao
